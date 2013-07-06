@@ -129,32 +129,35 @@
       $('.navWrapper .pageLeft, .navWrapper .pageRight').click(function (event) {
         event.preventDefault();
         if ($(this).siblings('.navCarousel').filter(':animated').length === 0) {
+          slider.pause.call(base);
           nav.page.call(base, this.className);
         }
       });
 
       nav.slides.click(function (event) {
-        if($(this).siblings('.slide.active').length) {
-          var $this = $(this),
-              $activeSlide = $this.siblings('.slide.active'),
-              targetIndex = $this.prev('.slide').length;
+        var $this = $(this),
+            targetIndex;
+        if(!$this.hasClass('active') && slider.elem.children('.slide').filter(':animated').length === 0) {
+          targetIndex = $this.prevAll('.slide').length;
 
-          $activeSlide.removeClass('active');
-          $this.addClass('active');
+          slider.pause();
 
-          slider.moveToSlide.call(base, $activeSlide, $this, targetIndex);
+          nav.elem.swapActiveClass(targetIndex);
+          slider.moveToSlide.call(base, targetIndex);
 
 
         }
       });
 
       nav.elem.parent().click(function (event) {
-          slider.pause.call(base);
-          slider.elem.children('.resume').show.call(base);
+        event.preventDefault();
+        slider.pause.call(base);
+        slider.elem.children('.resume').show.call(base);
       });
 
-      slider.elem.children('.resume').click(function () {
-          slider.play.call(base);
+      slider.elem.children('.resume').click(function (event) {
+        event.preventDefault();
+        slider.play.call(base);
       });
 
       return this;
@@ -169,17 +172,24 @@
           activeIndex = activeSlide.index(),
           targetIndex,
           targetSlide,
-          vars = nav.getMeasurements();
+          vars = nav.getMeasurements(),
+          leadingIndex = Math.round(-vars.navOffset / nav.slideWidth),
+          leadingDifference = activeIndex - leadingIndex;
 
       if (activeIndex >= (Module.prototype.slideCount - 1)) {
         targetSlide = slider.elem.children('.slide').eq(0);
         Module.prototype.navCounter = 1;
         nav.elem.animate({marginLeft: 0}, 600);
         nav.elem.swapActiveClass(0);
-        slider.moveToSlide(activeSlide, targetSlide, 0);
+        slider.moveToSlide(0);
       } else {
-        ++Module.prototype.navCounter;
-        targetIndex = activeIndex + 1;
+        Module.prototype.navCounter = Module.prototype.navCounter + leadingDifference;
+
+        if (Module.prototype.navCounter < vars.viewportCapacity) {
+          targetIndex = activeIndex + 1;
+        } else {
+          targetIndex = leadingIndex + vars.viewportCapacity;
+        }
 
         if (Module.prototype.navCounter > vars.viewportCapacity) {
           newOffset = vars.navOffset  - vars.pixelsToMove;
@@ -187,50 +197,60 @@
           Module.prototype.navCounter = 1;
         } else {
           targetSlide = slider.elem.children('.slide').eq(targetIndex);
+          ++Module.prototype.navCounter;
 
           if (!targetSlide.hasClass('active')) {
             nav.elem.swapActiveClass(targetIndex);
-            slider.moveToSlide(activeSlide, targetSlide, targetIndex);
+            slider.moveToSlide(targetIndex);
           }
         }
       }
     };
 
     if (Module.prototype.detectTransitions) {
-      slider.moveToSlide = function (activeSlide, targetSlide, targetIndex) {
-        targetSlide.css(slider.staged);
-        activeSlide.css('opacity', 0)
+      slider.moveToSlide = function (targetIndex) {
+        var $activeSlide = slider.elem.getActiveSlide();
+            $targetSlide = slider.elem.children('.slide').eq(targetIndex);
+
+        $targetSlide.css(slider.staged);
+        $activeSlide.css('opacity', 0)
         .get(0)
         .addEventListener("webkitTransitionEnd", function () {
-          targetSlide.css('z-index', 2);
-          activeSlide.css(slider.hidden);
+          $targetSlide.css('z-index', 2);
+          $activeSlide.css(slider.hidden);
           slider.elem.swapActiveClass(targetIndex);
         }, true);
 
         return this;
       };
     } else {
-      slider.moveToSlide = function (activeSlide, targetSlide, targetIndex) {
-        var activeSlide = slider.elem.getActiveSlide(),
-            $targetSlide = 
+      slider.moveToSlide = function (targetIndex) {
+        var $activeSlide = slider.elem.getActiveSlide(),
+            $targetSlide = slider.elem.children('.slide').eq(targetIndex);
 
-        targetSlide.css(slider.staged);
-        activeSlide.fadeOut(600, function () {
-          targetSlide.css('z-index', 2);
-          activeSlide.css(slider.hidden).css('opacity', 0);
-          slider.elem.swapActiveClass(targetIndex);
-        });
+        if (!$targetSlide.is($activeSlide)) {
+          $targetSlide.css(slider.staged);
+          $activeSlide.fadeOut(600, function () {
+            $targetSlide.css('z-index', 2);
+            $activeSlide.css(slider.hidden).css('opacity', 0);
+            slider.elem.swapActiveClass(targetIndex);
+          });
+        }
 
         return this;
       };
     }
 
     slider.play = function () {
+      slider.elem.find('.resume').hide();
+
       Module.prototype.playerId = setInterval(slider.iterate.bind(base), 5000);
       Module.prototype.playing = true;
     };
 
     slider.pause = function () {
+      slider.elem.find('.resume').show();
+
       clearInterval(Module.prototype.playerId);
       Module.prototype.playing = false;
     };
@@ -283,15 +303,10 @@
       }
     };
     nav.setActiveSlide = function (offsetVal) {
-      var targetIndex = Math.ceil(-offsetVal / nav.slideWidth),
-          sliderActive,
-          sliderTarget;
-
-      sliderActive = slider.elem.getActiveSlide();
-      sliderTarget = slider.elem.children('.slide').eq(targetIndex);
+      var targetIndex = Math.ceil(-offsetVal / nav.slideWidth);
 
       nav.elem.swapActiveClass(targetIndex);
-      slider.moveToSlide(sliderActive, sliderTarget, targetIndex);
+      slider.moveToSlide(targetIndex);
     };
 
     $.data(elem, 'responsiveSlider', slider);
