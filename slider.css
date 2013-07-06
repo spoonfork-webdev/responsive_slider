@@ -1,0 +1,54 @@
+
+/* Slider
+----------------------------------------------------------------------------------------*/
+#slider-demo, .navContainer {
+zoom: 1;
+}
+#slider-demo {
+position: relative;
+overflow: hidden;
+list-style: none;
+width: 100%;
+padding: 0;
+margin: 0 auto;
+}
+#slider-demo .slide {
+background-color: #fff;
+position: absolute;
+width: 100%;
+-webkit-backface-visibility: hidden;
+left: 0;
+top: 0;
+}
+
+
+/* Navigation
+----------------------------------------------------------------------------------------*/
+.navCarousel {
+list-style-type: none;
+margin: 0;
+padding: 0;
+width: 2400%;
+max-width: 2400%;
+}
+.navCarousel:after {
+content: ".";
+display: block;
+clear: both;
+visibility: hidden;
+line-height: 0;
+height: 0;
+}
+.navCarousel li {
+float: left;
+display: block;
+}
+.navCarousel .slide img {
+display: block;
+}
+.navCarousel .slide {
+opacity: 0.4;
+}
+.navCarousel .active {
+opacity: 1;
+}
